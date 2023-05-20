@@ -1,10 +1,26 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery)]
+
 use ggca::correlation::{get_correlation_method, CorrelationMethod};
 use mimalloc::MiMalloc;
 use polars::{
-    export::rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
+    export::rayon::prelude::{IntoParallelRefIterator, ParallelIterator},
     prelude::*,
 };
 use std::{env, fmt::Display, fs, process::exit};
+
+enum CorrelationValue {
+    Valid(CorrelationResult),
+    NotValid,
+}
+
+impl Display for CorrelationValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotValid => write!(f, "不適用"),
+            Self::Valid(result) => write!(f, "{result}"),
+        }
+    }
+}
 
 struct CorrelationResult {
     r: f64,
@@ -13,13 +29,18 @@ struct CorrelationResult {
 
 impl Display for CorrelationResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "r: {}<br>p value: {}", self.r, self.p_value)
+        let precision = 5;
+        write!(
+            f,
+            "r: {:.precision$}<br>p value: {:.precision$}",
+            self.r, self.p_value
+        )
     }
 }
 
 impl From<(f64, f64)> for CorrelationResult {
     fn from(value: (f64, f64)) -> Self {
-        CorrelationResult {
+        Self {
             r: value.0,
             p_value: value.1,
         }
@@ -64,7 +85,7 @@ fn main() {
     let processed_data = column_names
         .par_iter()
         .map(|column| {
-            let vec = iphone_dataframe
+            iphone_dataframe
                 .column(column)
                 .unwrap()
                 .cast(&DataType::Float64)
@@ -72,8 +93,6 @@ fn main() {
                 .f64()
                 .unwrap()
                 .into_iter()
-                .collect::<Vec<Option<f64>>>();
-            vec.into_par_iter()
                 .map(|data| data.unwrap_or(0.0))
                 .collect::<Vec<f64>>()
         })
@@ -90,11 +109,29 @@ fn main() {
         let series_name = column_names.get(index).unwrap_or(&"未知");
         let pearson_series = processed_data
             .iter()
-            .map(|y| format!("{}", CorrelationResult::from(pearson.correlate(x, y))))
+            .map(|y| {
+                if x == y {
+                    format!("{}", CorrelationValue::NotValid)
+                } else {
+                    format!(
+                        "{}",
+                        CorrelationValue::Valid(CorrelationResult::from(pearson.correlate(x, y)))
+                    )
+                }
+            })
             .collect::<Vec<String>>();
         let kendall_series = processed_data
             .iter()
-            .map(|y| format!("{}", CorrelationResult::from(kendall.correlate(x, y))))
+            .map(|y| {
+                if x == y {
+                    format!("{}", CorrelationValue::NotValid)
+                } else {
+                    format!(
+                        "{}",
+                        CorrelationValue::Valid(CorrelationResult::from(kendall.correlate(x, y)))
+                    )
+                }
+            })
             .collect::<Vec<String>>();
         pearson_series_vec.push(Series::new(series_name, pearson_series.as_slice()));
         kendall_series_vec.push(Series::new(series_name, kendall_series.as_slice()));

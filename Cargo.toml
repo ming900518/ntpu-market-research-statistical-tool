@@ -1,5 +1,5 @@
 [package]
-name = "ntpu-market-research-statistical-tools"
+name = "ntpu-market-research-statistical-tool"
 version = "0.1.0"
 edition = "2021"
 
