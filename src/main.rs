@@ -71,21 +71,21 @@ fn main() {
         "POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION",
         1.to_string(),
     );
-    let Ok(Ok(iphone_dataframe)) = CsvReader::from_path(file_name).map(|csv| csv.infer_schema(None).has_header(true).finish()) else {
+    let Ok(Ok(orig_dataframe)) = CsvReader::from_path(file_name).map(|csv| csv.infer_schema(None).has_header(true).finish()) else {
         eprintln!("Unable to open CSV file.");
         exit(1)
     };
     result.push(format!(
         "## 基本統計資訊\n\n{}\n\n",
-        iphone_dataframe
+        orig_dataframe
             .describe(Some(&[0.05, 0.25, 0.5, 0.75, 0.95]))
             .unwrap()
     ));
-    let column_names = iphone_dataframe.get_column_names();
+    let column_names = orig_dataframe.get_column_names();
     let processed_data = column_names
         .par_iter()
         .map(|column| {
-            iphone_dataframe
+            orig_dataframe
                 .column(column)
                 .unwrap()
                 .cast(&DataType::Float64)
