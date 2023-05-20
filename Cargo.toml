@@ -1,0 +1,9 @@
+[package]
+name = "ntpu-market-research-statistical-tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mimalloc = "*"
+polars = {version = "*", features = ["csv", "lazy", "describe"]}
+ggca = "*"
