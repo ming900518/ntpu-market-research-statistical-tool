@@ -6,6 +6,7 @@ use polars::{
     export::rayon::prelude::{IntoParallelRefIterator, ParallelIterator},
     prelude::*,
 };
+use pyo3::{types::IntoPyDict, Python};
 use std::{env, fmt::Display, fs, process::exit};
 
 enum CorrelationValue {
@@ -76,7 +77,7 @@ fn main() {
         exit(1)
     };
     result.push(format!(
-        "## 基本統計資訊\n\n{}\n\n",
+        "## 敘述統計\n\n{}\n\n",
         orig_dataframe
             .describe(Some(&[0.05, 0.25, 0.5, 0.75, 0.95]))
             .unwrap()
@@ -145,8 +146,21 @@ fn main() {
         DataFrame::new(kendall_series_vec).unwrap()
     ));
 
+    factor_analysis();
+
     if fs::write(format!("{file_name}.md"), result.join("")).is_err() {
         eprintln!("Unable to write result.");
         exit(1)
     }
+}
+
+fn factor_analysis() {
+    Python::with_gil(|py| {
+        let sys = py.import("sys").unwrap();
+        let version: String = sys.getattr("version").unwrap().extract().unwrap();
+        let locals = [("os", py.import("os").unwrap())].into_py_dict(py);
+        let code = "os.getenv('USER') or os.getenv('USERNAME') or 'Unknown'";
+
+        println!("{version}, {locals}, {code}");
+    });
 }

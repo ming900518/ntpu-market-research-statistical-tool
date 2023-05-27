@@ -7,3 +7,4 @@ edition = "2021"
 mimalloc = "*"
 polars = {version = "*", features = ["csv", "lazy", "describe"]}
 ggca = "*"
+pyo3  = {version = "*", features = ["auto-initialize"]}
