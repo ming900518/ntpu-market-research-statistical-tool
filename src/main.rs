@@ -1,12 +1,15 @@
 #![warn(clippy::all, clippy::pedantic, clippy::nursery)]
 
-use ggca::correlation::{get_correlation_method, CorrelationMethod};
 use mimalloc::MiMalloc;
 use polars::{
     export::rayon::prelude::{IntoParallelRefIterator, ParallelIterator},
     prelude::*,
 };
-use pyo3::{types::IntoPyDict, Python};
+use pyo3::{
+    types::{PyDict, PyModule},
+    IntoPy, Python,
+};
+use pyo3_polars::PyDataFrame;
 use std::{env, fmt::Display, fs, process::exit};
 
 enum CorrelationValue {
@@ -98,14 +101,9 @@ fn main() {
                 .collect::<Vec<f64>>()
         })
         .collect::<Vec<Vec<f64>>>();
-    let data_len = processed_data.get(0).unwrap().len();
-    let pearson = get_correlation_method(&CorrelationMethod::Pearson, data_len);
-    let kendall = get_correlation_method(&CorrelationMethod::Kendall, data_len);
     let mut pearson_series_vec = Vec::new();
-    let mut kendall_series_vec = Vec::new();
     let first_column = Series::new("", column_names.as_slice());
-    pearson_series_vec.push(first_column.clone());
-    kendall_series_vec.push(first_column);
+    pearson_series_vec.push(first_column);
     processed_data.iter().enumerate().for_each(|(index, x)| {
         let series_name = column_names.get(index).unwrap_or(&"未知");
         let pearson_series = processed_data
@@ -116,37 +114,49 @@ fn main() {
                 } else {
                     format!(
                         "{}",
-                        CorrelationValue::Valid(CorrelationResult::from(pearson.correlate(x, y)))
-                    )
-                }
-            })
-            .collect::<Vec<String>>();
-        let kendall_series = processed_data
-            .iter()
-            .map(|y| {
-                if x == y {
-                    format!("{}", CorrelationValue::NotValid)
-                } else {
-                    format!(
-                        "{}",
-                        CorrelationValue::Valid(CorrelationResult::from(kendall.correlate(x, y)))
+                        CorrelationValue::Valid(CorrelationResult::from(pearson(
+                            x.clone(),
+                            y.clone()
+                        )))
                     )
                 }
             })
             .collect::<Vec<String>>();
         pearson_series_vec.push(Series::new(series_name, pearson_series.as_slice()));
-        kendall_series_vec.push(Series::new(series_name, kendall_series.as_slice()));
     });
     result.push(format!(
         "## Pearson \n\n{}\n\n",
         DataFrame::new(pearson_series_vec).unwrap()
     ));
-    result.push(format!(
-        "## Kendall \n\n{}",
-        DataFrame::new(kendall_series_vec).unwrap()
-    ));
 
-    factor_analysis();
+    let factor_analysis_dataframe = DataFrame::new(
+        column_names
+            .par_iter()
+            .filter(|&&name| {
+                name == "請問您一次願意花多少新台幣購買手機充電設備 (例如：充電線、豆腐頭) ?"
+                    || name == "您一個月的平均花費為多少新台幣?"
+            })
+            .map(|column| {
+                let data = orig_dataframe
+                    .column(column)
+                    .unwrap()
+                    .cast(&DataType::Float64)
+                    .unwrap()
+                    .f64()
+                    .unwrap()
+                    .into_iter()
+                    .map(|data| data.unwrap_or(0.0))
+                    .collect::<Vec<f64>>();
+                Series::new(column, data)
+            })
+            .collect::<Vec<Series>>(),
+    )
+    .unwrap();
+
+    result.push(format!(
+        "## 因子分析 \n\n{}\n\n",
+        factor_analysis(factor_analysis_dataframe)
+    ));
 
     if fs::write(format!("{file_name}.md"), result.join("")).is_err() {
         eprintln!("Unable to write result.");
@@ -154,13 +164,44 @@ fn main() {
     }
 }
 
-fn factor_analysis() {
+fn factor_analysis(dataframe: DataFrame) -> DataFrame {
     Python::with_gil(|py| {
-        let sys = py.import("sys").unwrap();
-        let version: String = sys.getattr("version").unwrap().extract().unwrap();
-        let locals = [("os", py.import("os").unwrap())].into_py_dict(py);
-        let code = "os.getenv('USER') or os.getenv('USERNAME') or 'Unknown'";
+        let locals = PyDict::new(py);
+        locals
+            .set_item("dataframe", PyDataFrame(dataframe).into_py(py))
+            .unwrap();
+        py.run(
+            r#"
+from factor_analyzer import FactorAnalyzer
+import polars
+fa = FactorAnalyzer(rotation="promax")
+converted = dataframe.to_pandas(use_pyarrow_extension_array=True)
+fa.fit(converted)
+result = polars.DataFrame(data=fa.loadings_,schema=converted.columns.tolist())
+        "#,
+            None,
+            Some(locals),
+        )
+        .unwrap();
+        locals
+            .get_item("result")
+            .unwrap()
+            .extract::<PyDataFrame>()
+            .unwrap()
+            .into()
+    })
+}
 
-        println!("{version}, {locals}, {code}");
-    });
+fn pearson(x: Vec<f64>, y: Vec<f64>) -> (f64, f64) {
+    Python::with_gil(|py| {
+        let stats = PyModule::import(py, "scipy.stats").unwrap();
+        let pearson: (f64, f64) = stats
+            .getattr("pearsonr")
+            .unwrap()
+            .call1((x, y))
+            .unwrap()
+            .extract()
+            .unwrap();
+        pearson
+    })
 }
