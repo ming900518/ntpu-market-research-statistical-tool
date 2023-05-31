@@ -63,18 +63,7 @@ fn main() {
     };
 
     let mut result = Vec::new();
-
-    env::set_var("POLARS_FMT_MAX_ROWS", u16::MAX.to_string());
-    env::set_var("POLARS_FMT_MAX_COLS", u16::MAX.to_string());
-    env::set_var("POLARS_FMT_STR_LEN", u16::MAX.to_string());
-    env::set_var("POLARS_FMT_TABLE_FORMATTING", "ASCII_MARKDOWN");
-    env::set_var("POLARS_TABLE_WIDTH", u16::MAX.to_string());
-    env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", 1.to_string());
-    env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_SEPARATOR", 1.to_string());
-    env::set_var(
-        "POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION",
-        1.to_string(),
-    );
+    set_env();
     let Ok(Ok(orig_dataframe)) = CsvReader::from_path(file_name).map(|csv| csv.infer_schema(None).has_header(true).finish()) else {
         eprintln!("Unable to open CSV file.");
         exit(1)
@@ -162,6 +151,20 @@ fn main() {
         eprintln!("Unable to write result.");
         exit(1)
     }
+}
+
+fn set_env() {
+    env::set_var("POLARS_FMT_MAX_ROWS", u16::MAX.to_string());
+    env::set_var("POLARS_FMT_MAX_COLS", u16::MAX.to_string());
+    env::set_var("POLARS_FMT_STR_LEN", u16::MAX.to_string());
+    env::set_var("POLARS_FMT_TABLE_FORMATTING", "ASCII_MARKDOWN");
+    env::set_var("POLARS_TABLE_WIDTH", u16::MAX.to_string());
+    env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_DATA_TYPES", 1.to_string());
+    env::set_var("POLARS_FMT_TABLE_HIDE_COLUMN_SEPARATOR", 1.to_string());
+    env::set_var(
+        "POLARS_FMT_TABLE_HIDE_DATAFRAME_SHAPE_INFORMATION",
+        1.to_string(),
+    );
 }
 
 fn factor_analysis(dataframe: DataFrame) -> DataFrame {
