@@ -57,7 +57,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let Some(file_name) = args.get(1) else { 
+    let Some(file_name) = args.get(1) else {
         eprintln!("No file specified.");
         exit(1)
     };
@@ -149,6 +149,7 @@ fn set_env() {
         1.to_string(),
     );
 }
+
 fn correlation(
     processed_data: &[Vec<f64>],
     column_names: &Vec<&str>,
