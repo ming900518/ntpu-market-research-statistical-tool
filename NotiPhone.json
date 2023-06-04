@@ -1,0 +1,62 @@
+[
+    {
+        "name": "您的生理性別為?",
+        "scale": "Nominal"
+    },
+    {
+        "name": "您的年齡區間為?",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "您的職業類別為?",
+        "scale": "Nominal"
+    },
+    {
+        "name": "您一個月的平均花費為多少新台幣?",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "請問您每日使用手機的平均時長為何?",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "您目前這支手機已使用多久?",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "請問您近一次汰換手機的原因為何?",
+        "scale": "Nominal"
+    },
+    {
+        "name": "請問您通常多久會汰換手機？",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "我認為我目前所持有的手機符合我的使用需求",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "您目前主力使用的 非 iPhone 手機螢幕尺寸為何?",
+        "scale": "Nominal"
+    },
+    {
+        "name": "請問您一次願意花多少新台幣購買手機充電設備 (例如：充電線、豆腐頭) ?",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "選擇手機的時候，螢幕大是我的優先考量",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "請問電池大小（續航力）是否影響您的購買意願?",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "我在購買的手機之前，會先到各大論壇或 YouTube 頻道觀看文章/影片了解手機的相關參數",
+        "scale": "Ordinal"
+    },
+    {
+        "name": "若今天 Apple 宣佈下一代 iPhone 會將現行使用的 Lightning 接口換為 USB Type-C 接口，我會更想購買下一代 iPhone",
+        "scale": "Ordinal"
+    }
+]
