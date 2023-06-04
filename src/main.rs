@@ -90,32 +90,15 @@ fn main() {
                 .collect::<Vec<f64>>()
         })
         .collect::<Vec<Vec<f64>>>();
-    let mut pearson_series_vec = Vec::new();
-    let first_column = Series::new("", column_names.as_slice());
-    pearson_series_vec.push(first_column);
-    processed_data.iter().enumerate().for_each(|(index, x)| {
-        let series_name = column_names.get(index).unwrap_or(&"未知");
-        let pearson_series = processed_data
-            .iter()
-            .map(|y| {
-                if x == y {
-                    format!("{}", CorrelationValue::NotValid)
-                } else {
-                    format!(
-                        "{}",
-                        CorrelationValue::Valid(CorrelationResult::from(pearson(
-                            x.clone(),
-                            y.clone()
-                        )))
-                    )
-                }
-            })
-            .collect::<Vec<String>>();
-        pearson_series_vec.push(Series::new(series_name, pearson_series.as_slice()));
-    });
+    let (pearson_series_vec, kendall_series_vec) = correlation(&processed_data, &column_names);
     result.push(format!(
         "## Pearson \n\n{}\n\n",
         DataFrame::new(pearson_series_vec).unwrap()
+    ));
+
+    result.push(format!(
+        "## Kendall \n\n{}\n\n",
+        DataFrame::new(kendall_series_vec).unwrap()
     ));
 
     let factor_analysis_dataframe = DataFrame::new(
@@ -166,6 +149,54 @@ fn set_env() {
         1.to_string(),
     );
 }
+fn correlation(
+    processed_data: &[Vec<f64>],
+    column_names: &Vec<&str>,
+) -> (Vec<Series>, Vec<Series>) {
+    let mut pearson_series_vec = Vec::new();
+    let mut kendall_series_vec = Vec::new();
+    let first_column = Series::new("", column_names.as_slice());
+    pearson_series_vec.push(first_column.clone());
+    kendall_series_vec.push(first_column);
+    processed_data.iter().enumerate().for_each(|(index, x)| {
+        let series_name = column_names.get(index).unwrap_or(&"未知");
+        let pearson_series = processed_data
+            .iter()
+            .map(|y| {
+                if x == y {
+                    format!("{}", CorrelationValue::NotValid)
+                } else {
+                    format!(
+                        "{}",
+                        CorrelationValue::Valid(CorrelationResult::from(pearson(
+                            x.clone(),
+                            y.clone()
+                        )))
+                    )
+                }
+            })
+            .collect::<Vec<String>>();
+        let kendall_series = processed_data
+            .iter()
+            .map(|y| {
+                if x == y {
+                    format!("{}", CorrelationValue::NotValid)
+                } else {
+                    format!(
+                        "{}",
+                        CorrelationValue::Valid(CorrelationResult::from(kendall(
+                            x.clone(),
+                            y.clone()
+                        )))
+                    )
+                }
+            })
+            .collect::<Vec<String>>();
+        pearson_series_vec.push(Series::new(series_name, pearson_series.as_slice()));
+        kendall_series_vec.push(Series::new(series_name, kendall_series.as_slice()));
+    });
+    (pearson_series_vec, kendall_series_vec)
+}
 
 fn factor_analysis(dataframe: DataFrame) -> DataFrame {
     Python::with_gil(|py| {
@@ -200,6 +231,20 @@ fn pearson(x: Vec<f64>, y: Vec<f64>) -> (f64, f64) {
         let stats = PyModule::import(py, "scipy.stats").unwrap();
         let pearson: (f64, f64) = stats
             .getattr("pearsonr")
+            .unwrap()
+            .call1((x, y))
+            .unwrap()
+            .extract()
+            .unwrap();
+        pearson
+    })
+}
+
+fn kendall(x: Vec<f64>, y: Vec<f64>) -> (f64, f64) {
+    Python::with_gil(|py| {
+        let stats = PyModule::import(py, "scipy.stats").unwrap();
+        let pearson: (f64, f64) = stats
+            .getattr("kendalltau")
             .unwrap()
             .call1((x, y))
             .unwrap()
