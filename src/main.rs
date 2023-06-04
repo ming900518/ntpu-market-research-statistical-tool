@@ -122,8 +122,8 @@ fn main() {
         column_names
             .par_iter()
             .filter(|&&name| {
-                name == "請問您一次願意花多少新台幣購買手機充電設備 (例如：充電線、豆腐頭) ?"
-                    || name == "您一個月的平均花費為多少新台幣?"
+                name.contains("請問您一次願意花多少新台幣購買手機充電設備 (例如：充電線、豆腐頭) ?")
+                    || name.contains("您一個月的平均花費為多少新台幣?")
             })
             .map(|column| {
                 let data = orig_dataframe
